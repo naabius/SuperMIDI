@@ -1,0 +1,340 @@
+TITLE:: SuperMIDI
+summary:: A fast and flexible MIDI mapping system for SuperCollider
+categories:: External Control>MIDI
+related:: Classes/MIDIdef, Classes/Pbindef, Classes/Bus
+
+DESCRIPTION::
+SuperMIDI provides an automated way to manage MIDI CC mappings. It handles Control Bus creation, value scaling with curves, and soft-takeover logic automatically. It is designed to work with general parameters, Pbindef keys and transport (play / stop / pause).
+
+All mappings are created with auto-generated names, backed by control buses that can be read by any running Synth or Pbindef. Mappings can be saved to and loaded from JSON files, and are automatically rebuilt after CmdPeriod.
+
+
+CLASSMETHODS::
+
+private:: bus, map, midiOut, path, prMakeBus, prMakeData, prMakeID, prMakeMap, prPatternAction, prRebuild, prResolvePath, prScale, prTakeoverCheck, prValidate, printValue
+
+METHOD:: init
+Initialize the MIDI client.
+ARGUMENT:: midiOutPort
+Integer. The index of the MIDI output port to use for sending initial CC values to the controller.
+
+METHOD:: set
+Map a specific CC number and channel.
+
+ARGUMENT:: type
+Symbol. The controller behaviour. \control, \toggle, \moment (momentary toggle).
+
+ARGUMENT:: target
+Symbol. The name of the parameter name or pattern key to control. (e.g., \amp).
+
+ARGUMENT:: cc
+Integer 0 – 127. The CC number to listen on.
+
+ARGUMENT:: chan
+Integer 0 – 15. The MIDI channel.
+
+ARGUMENT:: min
+Number. The minimum output value.
+
+ARGUMENT:: max
+Number. The maximum output value.
+
+ARGUMENT:: init
+Number. The initial value written to the bus at mapping time, and sent back to the controller as a CC value. Should be within the min–max range.
+
+ARGUMENT:: curve
+Symbol or Number. The scaling curve applied to the 0 – 127 MIDI input range.
+list::
+## code::\lin:: — linear mapping
+## code::\exp:: — exponential mapping (note: min must be > 0 for exp; values ≤ 0 are clamped to 0.001 internally)
+## code::\sin:: — sinusoidal
+## a Number — custom curve via code::lincurve::; 0 = linear, positive values = upward, negative values = downward
+::
+
+METHOD:: learn
+Uses MIDI Learn to map a parameter. It waits for the first incoming CC message to determine the CC number and channel automatically. Useful when you do not know the CC or channel of a particular control.
+After calling learn, the post window shows: code::SuperMIDI: move your parameter or press a toggle::. Move the desired control on your hardware and the mapping is created immediately.
+
+ARGUMENT:: type
+Symbol. The controller behaviour. \control, \toggle, \moment (momentary toggle).
+
+ARGUMENT:: target
+Symbol. The name of the parameter name or pattern key to control. (e.g., \amp).
+
+ARGUMENT:: min
+Number. The minimum output value.
+
+ARGUMENT:: max
+Number. The maximum output value.
+
+ARGUMENT:: init
+Number. The initial value written to the bus at mapping time, and sent back to the controller as a CC value. Should be within the min–max range.
+
+ARGUMENT:: curve
+Symbol or Number. The scaling curve applied to the 0 – 127 MIDI input range.
+list::
+## code::\lin:: — linear mapping
+## code::\exp:: — exponential mapping (note: min must be > 0 for exp; values ≤ 0 are clamped to 0.001 internally)
+## code::\sin:: — sinusoidal
+## a Number — custom curve via code::lincurve::; 0 = linear, positive values = upward, negative values = downward
+::
+
+METHOD:: pset
+Map a specific CC number and channel to a key inside a Pbindef. Identical argument structure to code::.set::, with the addition of code::patternName::.
+
+ARGUMENT:: type
+Symbol. The controller behaviour. \control, \toggle, \moment (momentary toggle).
+
+ARGUMENT:: target
+Symbol. A Pbindef key such as code::\dur::, code::\degree::, code::\amp::, or one of the transport symbols code::\play::, code::\stop::, code::\pause::.
+
+ARGUMENT:: patternName
+Symbol. The name of the Pbindef to target.
+
+ARGUMENT:: cc
+Integer 0 – 127. The CC number to listen on.
+
+ARGUMENT:: chan
+Integer 0 – 15. The MIDI channel.
+
+ARGUMENT:: min
+Number. The minimum output value.
+
+ARGUMENT:: max
+Number. The maximum output value.
+
+ARGUMENT:: init
+Number. The initial value written to the bus at mapping time, and sent back to the controller as a CC value. Should be within the min–max range.
+
+ARGUMENT:: curve
+Symbol or Number. The scaling curve applied to the 0 – 127 MIDI input range.
+list::
+## code::\lin:: — linear mapping
+## code::\exp:: — exponential mapping (note: min must be > 0 for exp; values ≤ 0 are clamped to 0.001 internally)
+## code::\sin:: — sinusoidal
+## a Number — custom curve via code::lincurve::; 0 = linear, positive values = upward, negative values = downward
+::
+
+METHOD:: plearn
+Uses MIDI Learn to map a parameter to a key inside a Pbindef. It waits for the first incoming CC message to determine the CC number and channel automatically. Useful when you do not know the CC or channel of a particular control.
+After calling learn, the post window shows: code::SuperMIDI: move your parameter or press a toggle::. Move the desired control on your hardware and the mapping is created immediately.
+
+ARGUMENT:: type
+Symbol. The controller behaviour. \control, \toggle, \moment (momentary toggle).
+
+ARGUMENT:: target
+Symbol. A Pbindef key such as code::\dur::, code::\degree::, code::\amp::, or one of the transport symbols code::\play::, code::\stop::, code::\pause::.
+
+ARGUMENT:: patternName
+Symbol. The name of the Pbindef to target.
+
+ARGUMENT:: min
+Number. The minimum output value.
+
+ARGUMENT:: max
+Number. The maximum output value.
+
+ARGUMENT:: init
+Number. The initial value written to the bus at mapping time, and sent back to the controller as a CC value. Should be within the min–max range.
+
+ARGUMENT:: curve
+Symbol or Number. The scaling curve applied to the 0 – 127 MIDI input range.
+list::
+## code::\lin:: — linear mapping
+## code::\exp:: — exponential mapping (note: min must be > 0 for exp; values ≤ 0 are clamped to 0.001 internally)
+## code::\sin:: — sinusoidal
+## a Number — custom curve via code::lincurve::; 0 = linear, positive values = upward, negative values = downward
+::
+
+METHOD:: mapList
+Print a formatted summary of all current mappings to the post window. Output is sorted alphabetically by mapping name.
+
+ARGUMENT:: keyword
+String or nil. When given, only mappings whose auto-generated name contains the keyword are shown. Default: code::nil:: (show all).
+
+DISCUSSION::
+code::
+SuperMIDI.mapList;           // list everything
+SuperMIDI.mapList("freq");   // only mappings related to freq
+SuperMIDI.mapList("amp");   // only mappings related to amp
+::
+
+METHOD:: busList
+Print a formatted list of all active control buses to the post window.
+
+ARGUMENT:: keyword
+String or nil. Filters results the same way as code::.mapList::. Default: code::nil:: (show all).
+
+DISCUSSION::
+code::
+SuperMIDI.busList;
+// -> e.g.  control_freq_1_0 | Bus(control, 8, 1, server: localhost)
+::
+
+METHOD:: remove
+Remove a single mapping by name, freeing its link::Classes/MIDIdef:: and link::Classes/Bus::.
+
+ARGUMENT:: name
+Symbol. The mapping name.
+
+DISCUSSION::
+code::
+// Remove the freq mapping created by SuperMIDI.set(\control, \freq, cc: 1, chan: 0)
+SuperMIDI.remove(\control_freq_1_0);
+::
+
+METHOD:: removeAll
+Remove all mappings and free all buses. Internally calls code::MIDIdef.freeAll:: and disposes every bus in the bus dictionary.
+
+DISCUSSION::
+code::
+SuperMIDI.removeAll;
+// -> "SuperMIDI: all mappings and buses removed"
+::
+
+warning::
+code::removeAll:: calls code::MIDIdef.freeAll::, which removes strong::ALL:: MIDIdefs, including any you may have created independently of SuperMIDI.
+::
+
+METHOD:: save
+Saves all current mappings to a JSON file at the resolved path. The file stores every parameter needed to fully recreate all MIDIdefs and buses on a future code::.load::.
+
+ARGUMENT:: savePath
+String Optional path to set a custom JSON save path.
+
+DISCUSSION::
+code::
+SuperMIDI.save;
+// -> "SuperMIDI: mappings saved to /path/to/myPatch_SuperMIDI.json"
+::
+
+METHOD:: load
+Load and apply mappings from a JSON file at the resolved path, recreating all MIDIdefs and buses. Any existing mappings with the same name are overwritten; others are left untouched.
+
+ARGUMENT:: loadPath
+String Optional path to load a custom JSON load path.
+
+DISCUSSION::
+code::
+SuperMIDI.load;
+// -> "SuperMIDI: mappings loaded from /path/to/myPatch_SuperMIDI.json"
+::
+
+METHOD:: trace
+print the name, MIDI value and scaled value of mapped parameter
+
+note::
+code::load:: is called automatically after link::Classes/CmdPeriod::.
+::
+
+EXAMPLES::
+
+SUBSECTION:: Basic setup — synth parameter control
+
+code::
+s.boot;
+
+(
+SynthDef(\tone, { |out = 0, freq = 440, amp = 0.5, cutoff = 2000, gate = 1|
+    var filt = RLPF.ar(Saw.ar(freq), cutoff, 0.3);
+    var env  = EnvGen.kr(Env.adsr(0.02, 0.1, 0.8, 0.3), gate, doneAction: 2);
+    Out.ar(out, (filt * amp * env).dup);
+}).add;
+)
+
+SuperMIDI.init;
+
+SuperMIDI.set(\control, \freq,   cc: 1,  min: 80,   max: 1200, curve: \exp);
+SuperMIDI.set(\control, \cutoff, cc: 74, min: 200,  max: 8000, curve: \exp, takeover: true);
+SuperMIDI.set(\control, \amp,    cc: 7,  min: 0,    max: 0.9,  init: 0.5);
+SuperMIDI.set(\toggle,  \gate,   cc: 20);
+
+SuperMIDI.save;
+
+x = Synth(\tone);
+x.map(\freq,   SuperMIDI.bus[\control_freq_1_0]);
+x.map(\cutoff, SuperMIDI.bus[\control_cutoff_74_0]);
+x.map(\amp,    SuperMIDI.bus[\control_amp_7_0]);
+x.map(\gate,   SuperMIDI.bus[\toggle_gate_20_0]);
+::
+
+SUBSECTION:: Pattern control — continuous and transport
+
+code::
+s.boot;
+
+(
+Pbindef(\beat,
+    \instrument, \default,
+    \degree,     Prand([0, 2, 4, 7], inf),
+    \dur,        0.25,
+    \amp,        0.6
+).play;
+)
+
+SuperMIDI.init;
+
+// Continuous parameter control — CC is mapped live into the pattern
+SuperMIDI.pset(\control, \dur,    \beat, cc: 5,  min: 0.125, max: 1.0, curve: \exp);
+SuperMIDI.pset(\control, \amp,    \beat, cc: 7,  min: 0.1,   max: 0.9);
+
+// Transport — momentary buttons
+SuperMIDI.pset(\moment, \play,  \beat, cc: 36);
+SuperMIDI.pset(\moment, \stop,  \beat, cc: 37);
+
+// Transport — toggle button: hold to pause, release to resume
+SuperMIDI.pset(\toggle, \pause, \beat, cc: 38);
+
+SuperMIDI.save;
+::
+
+SUBSECTION:: Multi-pattern live set
+
+code::
+s.boot;
+SuperMIDI.init;
+
+// Define patterns
+Pbindef(\kick,   \instrument, \bd,  \dur, 1).play;
+Pbindef(\snare,  \instrument, \sd,  \dur, 0.5).play;
+Pbindef(\melody, \instrument, \default, \degree, 0, \dur, 0.25).play;
+
+// Melody pitch and speed
+SuperMIDI.pset(\control, \degree, \melody, cc: 16, min: 0,  max: 14);
+SuperMIDI.pset(\control, \dur,    \melody, cc: 17, min: 0.125, max: 1.0, curve: \exp);
+
+// Per-pattern transport on pads
+SuperMIDI.pset(\moment, \play,  \kick,   cc: 36);
+SuperMIDI.pset(\moment, \stop,  \kick,   cc: 37);
+SuperMIDI.pset(\moment, \play,  \snare,  cc: 38);
+SuperMIDI.pset(\moment, \stop,  \snare,  cc: 39);
+SuperMIDI.pset(\moment, \play,  \melody, cc: 40);
+SuperMIDI.pset(\moment, \stop,  \melody, cc: 41);
+
+SuperMIDI.save;
+::
+
+SUBSECTION:: Learn mode — mapping unknown controllers
+
+code::
+SuperMIDI.init;
+
+// Run each line, then move the target control on your hardware.
+// The CC number and channel are detected automatically.
+
+SuperMIDI.learn(\control, \freq,   min: 80, max: 1200, curve: \exp);
+SuperMIDI.learn(\control, \amp,    min: 0,  max: 0.9);
+SuperMIDI.learn(\toggle,  \gate);
+
+// Pattern learn
+SuperMIDI.plearn(\control, \dur, \beat, min: 0.125, max: 1.0, curve: \exp);
+
+// After learning everything, save so it persists
+SuperMIDI.save;
+::
+// Check the current bus value while moving the knob
+SuperMIDI.bus[\control_freq_1_0].getSynchronous;
+::
+
+
+
