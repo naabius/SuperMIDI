@@ -1,12 +1,12 @@
 TITLE:: SuperMIDI
-summary:: A fast and flexible MIDI mapping system for SuperCollider
+summary:: A fast and flexible MIDI mapping utility for SuperCollider
 categories:: External Control>MIDI
 related:: Classes/MIDIdef, Classes/Pbindef, Classes/Bus
 
 DESCRIPTION::
 SuperMIDI provides an automated way to manage MIDI CC mappings. It handles Control Bus creation, value scaling with curves, and soft-takeover logic automatically. It is designed to work with general parameters, Pbindef keys and transport (play / stop / pause).
 
-All mappings are created with auto-generated names, backed by control buses that can be read by any running Synth or Pbindef. Mappings can be saved to and loaded from JSON files, and are automatically rebuilt after CmdPeriod.
+All mappings are created with auto-generated names, backed by control buses that can be read by any running Synth or Pbindef. Mappings can be saved to and loaded from JSON files.
 
 
 CLASSMETHODS::
@@ -18,7 +18,7 @@ Initialize the MIDI client.
 ARGUMENT:: midiOutPort
 Integer. The index of the MIDI output port to use for sending initial CC values to the controller.
 
-METHOD:: set
+METHOD:: map
 Map a specific CC number and channel.
 
 ARGUMENT:: type
@@ -79,7 +79,7 @@ list::
 ## a Number — custom curve via code::lincurve::; 0 = linear, positive values = upward, negative values = downward
 ::
 
-METHOD:: pset
+METHOD:: pmap
 Map a specific CC number and channel to a key inside a Pbindef. Identical argument structure to code::.set::, with the addition of code::patternName::.
 
 ARGUMENT:: type
@@ -223,15 +223,12 @@ SuperMIDI.load;
 METHOD:: trace
 print the name, MIDI value and scaled value of mapped parameter
 
-note::
-code::load:: is called automatically after link::Classes/CmdPeriod::.
-::
-
 EXAMPLES::
 
 SUBSECTION:: Basic setup — synth parameter control
 
 code::
+
 s.boot;
 
 (
@@ -242,99 +239,21 @@ SynthDef(\tone, { |out = 0, freq = 440, amp = 0.5, cutoff = 2000, gate = 1|
 }).add;
 )
 
-SuperMIDI.init;
-
-SuperMIDI.set(\control, \freq,   cc: 1,  min: 80,   max: 1200, curve: \exp);
-SuperMIDI.set(\control, \cutoff, cc: 74, min: 200,  max: 8000, curve: \exp, takeover: true);
-SuperMIDI.set(\control, \amp,    cc: 7,  min: 0,    max: 0.9,  init: 0.5);
-SuperMIDI.set(\toggle,  \gate,   cc: 20);
-
-SuperMIDI.save;
+(
+SuperMIDI.map(\control, \freq,   cc: 1,  min: 80,   max: 1200, curve: \exp);
+SuperMIDI.map(\control, \cutoff, cc: 2, min: 200,  max: 8000, curve: \exp);
+SuperMIDI.map(\control, \amp,    cc: 3,  min: 0,    max: 0.9,  init: 0.5);
+)
 
 x = Synth(\tone);
+
+(
 x.map(\freq,   SuperMIDI.bus[\control_freq_1_0]);
 x.map(\cutoff, SuperMIDI.bus[\control_cutoff_74_0]);
 x.map(\amp,    SuperMIDI.bus[\control_amp_7_0]);
-x.map(\gate,   SuperMIDI.bus[\toggle_gate_20_0]);
-::
-
-SUBSECTION:: Pattern control — continuous and transport
-
-code::
-s.boot;
-
-(
-Pbindef(\beat,
-    \instrument, \default,
-    \degree,     Prand([0, 2, 4, 7], inf),
-    \dur,        0.25,
-    \amp,        0.6
-).play;
 )
-
-SuperMIDI.init;
-
-// Continuous parameter control — CC is mapped live into the pattern
-SuperMIDI.pset(\control, \dur,    \beat, cc: 5,  min: 0.125, max: 1.0, curve: \exp);
-SuperMIDI.pset(\control, \amp,    \beat, cc: 7,  min: 0.1,   max: 0.9);
-
-// Transport — momentary buttons
-SuperMIDI.pset(\moment, \play,  \beat, cc: 36);
-SuperMIDI.pset(\moment, \stop,  \beat, cc: 37);
-
-// Transport — toggle button: hold to pause, release to resume
-SuperMIDI.pset(\toggle, \pause, \beat, cc: 38);
-
-SuperMIDI.save;
-::
-
-SUBSECTION:: Multi-pattern live set
-
-code::
-s.boot;
-SuperMIDI.init;
-
-// Define patterns
-Pbindef(\kick,   \instrument, \bd,  \dur, 1).play;
-Pbindef(\snare,  \instrument, \sd,  \dur, 0.5).play;
-Pbindef(\melody, \instrument, \default, \degree, 0, \dur, 0.25).play;
-
-// Melody pitch and speed
-SuperMIDI.pset(\control, \degree, \melody, cc: 16, min: 0,  max: 14);
-SuperMIDI.pset(\control, \dur,    \melody, cc: 17, min: 0.125, max: 1.0, curve: \exp);
-
-// Per-pattern transport on pads
-SuperMIDI.pset(\moment, \play,  \kick,   cc: 36);
-SuperMIDI.pset(\moment, \stop,  \kick,   cc: 37);
-SuperMIDI.pset(\moment, \play,  \snare,  cc: 38);
-SuperMIDI.pset(\moment, \stop,  \snare,  cc: 39);
-SuperMIDI.pset(\moment, \play,  \melody, cc: 40);
-SuperMIDI.pset(\moment, \stop,  \melody, cc: 41);
-
-SuperMIDI.save;
-::
-
-SUBSECTION:: Learn mode — mapping unknown controllers
-
-code::
-SuperMIDI.init;
-
-// Run each line, then move the target control on your hardware.
-// The CC number and channel are detected automatically.
-
-SuperMIDI.learn(\control, \freq,   min: 80, max: 1200, curve: \exp);
-SuperMIDI.learn(\control, \amp,    min: 0,  max: 0.9);
-SuperMIDI.learn(\toggle,  \gate);
-
-// Pattern learn
-SuperMIDI.plearn(\control, \dur, \beat, min: 0.125, max: 1.0, curve: \exp);
-
-// After learning everything, save so it persists
-SuperMIDI.save;
-::
 // Check the current bus value while moving the knob
 SuperMIDI.bus[\control_freq_1_0].getSynchronous;
 ::
-
 
 
